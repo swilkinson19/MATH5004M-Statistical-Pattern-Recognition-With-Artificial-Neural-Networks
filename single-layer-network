@@ -70,7 +70,7 @@ for i in range(60000):
 acc_count = 0
 network_test_results = pd.DataFrame(index=range(10000) , columns=['target','predicted','correct'])
 for i in range(10000):
-    current_output = network_test.predict((test_images[i,:,:]/255))
+    current_output = network_one.predict((test_images[i,:,:]/255))
     network_test_results['target'][i] = test_labels[i]
     network_test_results['predicted'][i] = current_output
     if current_output == test_labels[i]:
