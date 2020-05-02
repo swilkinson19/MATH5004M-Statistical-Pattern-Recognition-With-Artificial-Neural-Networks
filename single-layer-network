@@ -53,18 +53,18 @@ class NeuralNetwork():
         self.weights = self.weights + self.lr * np.dot(network_error*self.actfuncdiff(weighted_sums), network_inputs.T)
         
         
-    def test(self, input_data):
+    def predict(self, input_data):
         network_inputs = np.array(input_data.flatten(order='C'), ndmin=2).T
         weighted_sums = np.dot(self.weights, network_inputs)
         network_output = self.actfunc(weighted_sums + self.bias)
-        return network_output
+        return network_output.tolist().index(max(network_output.tolist()))
         
 #INITIALISE AN INSTANCE OF THE NETWORK
 network_one = NeuralNetwork(28*28, 10, .05)
 
 #TRAIN THE NETWORK
 for i in range(60000):
-    network_test.training((train_images[i,:,:]/255), train_labels[i])
+    network_one.training((train_images[i,:,:]/255), train_labels[i])
 
 #TEST THE NETWORK
 acc_count = 0
@@ -78,4 +78,4 @@ for i in range(10000):
     else:
         acc_test=0
     acc_count += acc_test
-print(acc_count/10000) 
+print((acc_count/10000)*100) 
