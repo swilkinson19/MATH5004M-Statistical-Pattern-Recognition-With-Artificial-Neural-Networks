@@ -77,7 +77,7 @@ class OneHiddenLayer():
         return network_output
 
 #INITALISE A INSTANCE OF THE NETWORK
-network_one = OneHiddenLayer(28*28, 50, 10, 0.1)
+network_one = OneHiddenLayer(input_nodes = 28*28, hidden_nodes = 50, output_nodes = 10, learning_rate = 0.1)
 
 #TRAIN THE NETWORK
 for i in range(60000):
