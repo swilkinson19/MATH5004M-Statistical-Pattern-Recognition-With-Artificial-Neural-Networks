@@ -68,16 +68,16 @@ class OneHiddenLayer():
         self.weights1 = self.weights1 + self.lr * np.dot(hidden_error*self.actfuncdiff(weighted_sums1), network_inputs.T)
         
         
-    def test(self, input_data):
+    def predict(self, input_data):
         network_inputs = np.array(input_data.flatten(order='C'), ndmin=2).T
         weighted_sums1 = np.dot(self.weights1, network_inputs)
         hidden_output = self.actfunc(weighted_sums1 + self.bias1)
         weighted_sums2 = np.dot(self.weights2, hidden_output)
         network_output = self.actfunc(weighted_sums2 + self.bias2)
-        return network_output
+        return network_output.tolist().index(max(network_output.tolist()))
 
 #INITALISE A INSTANCE OF THE NETWORK
-network_one = OneHiddenLayer(input_nodes = 28*28, hidden_nodes = 50, output_nodes = 10, learning_rate = 0.1)
+network_one = OneHiddenLayer(input_nodes = 28*28, hidden_nodes = 20, output_nodes = 10, learning_rate = 0.1)
 
 #TRAIN THE NETWORK
 for i in range(60000):
@@ -90,4 +90,4 @@ for i in range(10000):
     network_results['predicted'][i] = network_one.predict(test_images[i,:,:]/255)
     
 network_results['correct'] = network_results['target']-network_results['predicted']
-(sum(network_results['correct']==0)/10000)*100
+print((sum(network_results['correct']==0)/10000)*100)
