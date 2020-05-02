@@ -1,0 +1,104 @@
+#IMPORT PACKAGES
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.colors as cl
+
+#READ IN DATA
+iris = pd.read_csv('iris.data', header=None)
+iris.columns = ['sepal_length','sepal_width','petal_length','petal_width','species']
+
+#NORMALISE DATA
+iris['sepal_length'] = (iris['sepal_length']-iris['sepal_length'].min()) / (iris['sepal_length'].max()-iris['sepal_length'].min()) 
+iris['sepal_width'] = (iris['sepal_width']-iris['sepal_width'].min()) / (iris['sepal_width'].max()-iris['sepal_width'].min()) 
+iris['petal_length'] = (iris['petal_length']-iris['petal_length'].min()) / (iris['petal_length'].max()-iris['petal_length'].min()) 
+iris['petal_width'] = (iris['petal_width']-iris['petal_width'].min()) / (iris['petal_width'].max()-iris['petal_width'].min()) 
+
+#CONVERT SPECIES TO BINARY VARIABLE
+for i in range(150):
+    if iris['species'][i] == 'Iris-setosa':
+        iris.at[i, 'species'] = 0
+    elif iris['species'][i] == 'Iris-versicolor':
+        iris.at[i, 'species'] = 1
+    else:
+        iris.at[i,'species'] = 2
+iris = iris[iris['species'] != 2]
+
+#ADD BIAS
+iris = iris[['sepal_length','sepal_width','petal_length','petal_width','species']].T
+bias = [0]*100
+iris.loc['bias'] = bias
+
+#SEPARATE TRAINING SET
+iris_train = iris.loc[:,5:94]
+#RESET INDEX
+iris_train.columns = range(90)
+iris_train_input = iris_train.loc[['sepal_length','sepal_width','petal_length','petal_width']].T
+
+#SHUFFLE TRAINING SAMPLE ORDER
+from sklearn.utils import shuffle
+iris_train = shuffle(iris_train.T)
+iris_train = iris_train.T
+iris_train.columns = range(90)
+
+PREPARE TEST SET
+iris_test = iris.loc[:,0:4].join(iris.loc[:,95:99])
+iris_test.columns = range(10)
+iris_test_input = iris_test.loc[['sepal_length','sepal_width','petal_length','petal_width']].T
+
+#CREATE CLASS LABELS FOR TRAINING AND TEST SETS
+iris_train_target = iris_train.loc[['species']].T
+iris_train_target.species = iris_train_target.species.astype(int)
+iris_test_target = iris_test.loc[['species']].T
+iris_test_target.species = iris_test_target.species.astype(int)
+
+#LINEAR DISCRIMINANT ANALYSIS
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+ldamodel = LinearDiscriminantAnalysis()
+ldamodel.fit(iris_train_input.loc[:,['sepal_length','sepal_width','petal_length','petal_width']], np.array(iris_train_target).reshape(90))
+
+#CREATE ARTIFICIAL DATA TO PLOT HEATMAP
+sepal_length_test = np.linspace(iris_train.loc['sepal_length'].min(),
+                                iris_train.loc['sepal_length'].max(),
+                                100)
+sepal_width_test = np.linspace(iris_train.loc['sepal_width'].min(),
+                               iris_train.loc['sepal_width'].max(),
+                               100)
+petal_length_test = np.linspace(iris_train.loc['petal_length'].min(),
+                                iris_train.loc['petal_length'].max(),
+                                100)
+petal_width_test = np.linspace(iris_train.loc['petal_width'].min(),
+                               iris_train.loc['petal_width'].max(),
+                               100)
+
+#DEFINE FUNCTION TO PLOT HEATMAP
+newcmp = cl.ListedColormap(['bisque','powderblue'])
+sccmp = cl.ListedColormap(['darkorange','dodgerblue'])
+def createLdaHeatmap(test_list_one, test_list_two, list_one_name, list_two_name):
+    #create training data
+    iris_train_input = iris_train.loc[[list_one_name,list_two_name]].T
+    iris_train_target = iris_train.loc[['species']].T
+    iris_train_target.species = iris_train_target.species.astype(int)
+    #create sample test data
+    df_sample = pd.DataFrame(np.repeat(test_list_one,100),
+                             columns=[list_one_name]).T
+    df_sample.loc[list_two_name] = test_list_two.tolist()*100
+    #logistic regression
+    ldamodel = LinearDiscriminantAnalysis()
+    ldamodel.fit(iris_train_input.loc[:,[list_one_name, list_two_name]], np.array(iris_train_target).reshape(90))
+    #create variables for heatmap plotting
+    z = []
+    for i in range(10000):
+        z.append(ldamodel.predict(np.array(df_sample.T.loc[i]).reshape(1,-1)))
+    y,x = np.meshgrid(test_list_two, test_list_one)
+    fig,ax = plt.subplots()
+    ax.pcolormesh(x,y,np.array(z).round().reshape(100,100), cmap=newcmp)
+    plt.scatter(iris_train.loc[list_one_name], 
+                iris_train.loc[list_two_name], 
+                c=iris_train.loc['species'],
+                cmap=sccmp)
+    ax.set_xlabel(list_one_name)
+    ax.set_ylabel(list_two_name)
+
+#CREATE PLOT
+createLdaHeatmap(petal_length_test, sepal_width_test, 'petal_length','sepal_width')
