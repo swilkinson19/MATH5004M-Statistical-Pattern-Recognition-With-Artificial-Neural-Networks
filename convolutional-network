@@ -1,0 +1,167 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import mnist
+
+#READ IN TRAINING DATA
+train_images = mnist.train_images()
+train_labels = mnist.train_labels()
+
+#READ IN AND PREPARE TEST CASES
+test_images = mnist.test_images()
+test_labels = mnist.test_labels()
+
+#CREATE CLASS FOR THE CONVOLUTIONAL LAYER
+class ConvolutionLayer():
+    
+    def __init__ (self, num_filters, lr):
+        
+        self.numfilters = num_filters
+        #self.filters = np.array([np.random.randint(-1,2) for p in range(3*3*num_filters)]).reshape((num_filters,3,3)).astype(float)
+        #self.filters = np.ones((self.numfilters, 3, 3))
+        self.last_input = []
+        self.filters = np.random.randn(self.numfilters, 3, 3)/9
+        self.lr = lr
+        
+    def forward(self, input_image):
+        
+        self.last_input = input_image
+        conv_output = np.zeros((input_image.shape[0]-2, input_image.shape[1]-2, self.numfilters))
+        
+        for k in range(self.numfilters):
+            for i in range(input_image.shape[0]-2):
+                for j in range(input_image.shape[1]-2):
+                    receptive_field = input_image[i:(i+3),j:(j+3)]
+                    conv_output[i,j,k] = max(0,(receptive_field * self.filters3[k,:,:]).sum())  
+        return(conv_output)                      
+                
+    def training(self, adj):
+        filter_error = adj.reshape(self.last_input.shape[0]-2, self.last_input.shape[1]-2, self.numfilters)
+        filter_adj = np.zeros(self.filters.shape)
+        
+        for k in range(self.numfilters):
+            
+            for i in range(self.last_input.shape[0]-2):
+                for j in range(self.last_input.shape[1]-2):
+                    receptive_field = self.last_input[i:(i+3),j:(j+3)]
+                    filter_adj[k,:,:] += filter_error[i,j,k] * (receptive_field)
+
+                 self.filters3[k,:,:] += self.lr * filter_adj[k,:,:]
+        
+        self.adj = filter_adj
+        
+#CREATE CLASS FOR THE MAX-POOLING LAYER
+class PoolingLayer():
+    
+    def forward(self, conv_output):
+        pool_output = np.zeros((conv_output.shape[0]//2, conv_output.shape[1]//2, conv_output.shape[2]))
+        
+        self.last_input = conv_output
+        for k in range(conv_output.shape[2]):
+            for i in range(conv_output.shape[0]//2):
+                for j in range(conv_output.shape[1]//2):
+                    receptive_field = conv_output[(2*i):(2*i+2),(2*j):(2*j+2),k]
+                    pool_output[i,j,k] = receptive_field.max()
+        return(pool_output)   
+    
+    def training(self, network_error):
+        max_errors = network_error.reshape((self.last_input.shape[0]//2, self.last_input.shape[1]//2, self.last_input.shape[2]))
+        self.pooling_error = np.zeros(self.last_input.shape)
+        
+        for k in range(self.last_input.shape[2]):
+            for i in range(self.last_input.shape[0]//2):
+                for j in range(self.last_input.shape[1]//2):
+                    receptive_field = self.last_input[(2*i):(2*i+2),(2*j):(2*j+2), k]
+                    max_occ = 0
+                    for i2 in range(receptive_field.shape[0]):
+                        for j2 in range(receptive_field.shape[1]):
+                            if receptive_field[i2,j2] == receptive_field.max() :
+                                max_occ += 1
+                    for i3 in range(receptive_field.shape[0]):
+                        for j3 in range(receptive_field.shape[1]):
+                            if (receptive_field[i3,j3] == receptive_field.max()) :
+                                self.pooling_error[i*2 + i3, j*2 + j3, k] = max_errors[i,j,k]/max_occ
+
+#CREATE CLASS FOR THE FULLY-CONNECTED LAYER
+class NeuralNetwork():
+    
+    def __init__ (self, input_nodes, output_nodes, learning_rate):
+        
+        #set up network dimensions
+        self.in_nodes = input_nodes
+        self.out_nodes = output_nodes
+        
+        #set up network parameters
+        self.lr = learning_rate
+        self.bias = np.zeros((output_nodes, 1))
+        self.weights = (np.random.randn(self.out_nodes, self.in_nodes))/self.in_nodes
+        self.input_error = np.zeros((input_nodes, 1))
+    
+    def actfunc(self,x):
+        return 1/(1 + np.exp(-x.astype(float))) 
+    
+    def actfuncdiff(self, x):
+        return self.actfunc(x)*(1 - self.actfunc(x))
+    
+    def training(self, training_input, training_target):
+        
+        #for each training case:
+        #set up each training case as an array of values
+        network_inputs = np.array(training_input.flatten(order='C'), ndmin=2).T
+        network_targets = np.array([0]*10, ndmin=2).T
+        network_targets[training_target] = 1
+        #calculate the weighted sums from the input layer
+        weighted_sums = np.dot(self.weights, network_inputs) + self.bias
+        #apply the activation function to the weighted sums
+        network_outputs = self.actfunc(weighted_sums)
+            
+        #compare the network output with the target values
+        network_error = network_targets - network_outputs
+        
+        #calculate input adjustment and save to send back to pooling layer
+        self.input_error = np.dot((network_error*self.actfuncdiff(weighted_sums)).T, self.weights)
+        #update the bias
+        self.bias = self.bias + self.lr * network_error*self.actfuncdiff(weighted_sums)
+        #update the weights
+        self.weights = self.weights + self.lr * np.dot(network_error*self.actfuncdiff(weighted_sums), network_inputs.T)
+        
+    def test(self, input_data):
+        network_inputs = np.array(input_data.flatten(order='C'), ndmin=2).T
+        weighted_sums = np.dot(self.weights, network_inputs)
+        network_output = self.actfunc(weighted_sums + self.bias)
+        return network_output
+    
+    def predict(self, input_data):
+        network_inputs = np.array(input_data.flatten(order='C'), ndmin=2).T
+        weighted_sums = np.dot(self.weights, network_inputs)
+        network_output = self.actfunc(weighted_sums + self.bias)
+        return network_output.tolist().index(max(network_output.tolist()))
+
+#CREATE AN INSTANCE OF THE NETWORK
+network_conv = ConvolutionLayer(8, 0.01)
+network_pool = PoolingLayer()
+network_fc = NeuralNetwork(13*13*8, 10, 0.01)
+
+#TRAIN THE NETWORK
+for i in range(60000):    
+    current_output = network_conv.forward((train_images[i,:,:]/255))
+    current_output = network_pool.forward(current_output)
+    network_fc.training(current_output, train_labels[i])
+    network_pool.training(network_fc.input_error)
+    network_conv.training(network_pool.pooling_error)
+
+#TEST THE NETWORK
+acc_count = 0
+network_test_results = pd.DataFrame(index=range(10000) , columns=['target','predicted','correct'])
+for i in range(10000):
+    current_output = network_conv.forward((test_images[i,:,:]/255))
+    current_output = network_pool.forward(current_output)
+    current_output = network_fc.predict(current_output)
+    network_test_results['target'][i] = test_labels[i]
+    network_test_results['predicted'][i] = current_output
+    if current_output == test_labels[i]:
+        acc_test = 1
+    else:
+        acc_test=0
+    acc_count += acc_test
+print((acc_count/10000)*100) 
