@@ -81,7 +81,7 @@ class TwoHiddenLayers():
         self.weights2 += self.lr * np.dot((hidden_error2*self.actfuncdiff(weighted_sums2)), hidden_layer_output1.T)
         self.weights1 += self.lr * np.dot((hidden_error1*self.actfuncdiff(weighted_sums1)), network_inputs.T)
 
-    def test(self, input_data):
+    def predict(self, input_data):
         network_inputs = np.array(input_data.flatten(order='C'), ndmin=2).T
         weighted_sums1 = np.dot(self.weights1, network_inputs)
         hidden_layer_output1 = self.actfunc(weighted_sums1)
@@ -89,7 +89,7 @@ class TwoHiddenLayers():
         hidden_layer_output2 = self.actfunc(weighted_sums2)
         weighted_sums3 = np.dot(self.weights3, hidden_layer_output2)
         network_output = self.actfunc(weighted_sums3)
-        return network_output
+        return network_output.tolist().index(max(network_output.tolist()))
    
 #CREATE AN INSTANCE OF THE NETWORK
 network_one = TwoHiddenLayers(input_nodes = 28*28, hidden_nodes1 = 50, hidden_nodes2 = 50, output_nodes = 10, learning_rate = .05)
@@ -105,4 +105,4 @@ for i in range(10000):
     network_results['predicted'][i] = network_one.predict(test_images[i,:,:])
     
 network_results['correct'] = network_results['target']-network_results['predicted']
-(sum(network_results['correct']==0)/10000)*100
+print((sum(network_results['correct']==0)/10000)*100)
