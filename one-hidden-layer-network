@@ -1,0 +1,93 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import mnist
+
+#READ IN TRAINING DATA
+train_images = mnist.train_images()
+train_labels = mnist.train_labels()
+
+#READ IN AND PREPARE TEST CASES
+test_images = mnist.test_images()
+test_labels = mnist.test_labels()
+
+#DEFINE CLASS FOR A NETWORK WITH ONE HIDDEN LAYER
+class OneHiddenLayer():
+    
+    def __init__ (self, input_nodes, hidden_nodes, output_nodes, learning_rate):
+        
+        #define the dimensions of the network
+        self.in_nodes = input_nodes
+        self.out_nodes = output_nodes
+        self.hid_nodes = hidden_nodes
+        self.lr = learning_rate
+        
+        #set network parameters
+        self.lr = learning_rate
+        self.bias1 = np.zeros((hidden_nodes, 1))
+        self.bias2 = np.zeros((output_nodes, 1))
+        self.weights1 = (np.random.randn(self.hid_nodes, self.in_nodes))/self.in_nodes
+        self.weights2 = (np.random.randn(self.out_nodes, self.hid_nodes))/self.hid_nodes
+        
+    def actfunc(self,x):
+        return 1/(1 + np.exp(-x.astype(float))) 
+    
+    def actfuncdiff(self, x):
+        return self.actfunc(x)*(1 - self.actfunc(x))
+    
+    def training(self, training_input, training_target):
+        
+        #for each training case:
+        #set up each training case as an array of values
+        network_inputs = np.array(training_input.flatten(order='C'), ndmin=2).T
+        network_targets = np.array([0]*10, ndmin=2).T
+        network_targets[training_target] = 1
+        
+        #calculate the weighted sums from the input layer
+        weighted_sums1 = np.dot(self.weights1, network_inputs) + self.bias1
+        #calculate hidden layer output
+        hidden_outputs = self.actfunc(weighted_sums1)
+        #calculate weighted sums from the hidden layer
+        weighted_sums2 = np.dot(self.weights2, hidden_outputs) + self.bias2
+        #calculate network output
+        network_outputs = self.actfunc(weighted_sums2)
+            
+        #compare the network output with the target values
+        network_targets = np.array([0]*10, ndmin=2).T
+        network_targets[training_target] = 1
+        #compute network error
+        network_error = network_targets - network_outputs
+        #transmit network error back to the hidden layer nodes
+        hidden_error = np.dot(self.weights2.T, network_error)
+        
+        #update the biases
+        self.bias2 = self.bias2 + self.lr * network_error*self.actfuncdiff(weighted_sums2)
+        self.bias1 = self.bias1 + self.lr * hidden_error*self.actfuncdiff(weighted_sums1)
+        #update the weights
+        self.weights2 = self.weights2 + self.lr * np.dot(network_error*self.actfuncdiff(weighted_sums2), hidden_outputs.T)
+        self.weights1 = self.weights1 + self.lr * np.dot(hidden_error*self.actfuncdiff(weighted_sums1), network_inputs.T)
+        
+        
+    def test(self, input_data):
+        network_inputs = np.array(input_data.flatten(order='C'), ndmin=2).T
+        weighted_sums1 = np.dot(self.weights1, network_inputs)
+        hidden_output = self.actfunc(weighted_sums1 + self.bias1)
+        weighted_sums2 = np.dot(self.weights2, hidden_output)
+        network_output = self.actfunc(weighted_sums2 + self.bias2)
+        return network_output
+
+#INITALISE A INSTANCE OF THE NETWORK
+network_one = OneHiddenLayer(28*28, 50, 10, 0.1)
+
+#TRAIN THE NETWORK
+for i in range(60000):
+    network_one.training(train_images[i,:,:]/255, train_labels[i])
+    
+#TEST THE NETWORK
+network_results = pd.DataFrame(index=range(10000) , columns=['target','predicted','correct'])
+for i in range(10000):
+    network_results['target'][i] = test_labels[i]
+    network_results['predicted'][i] = network_one.predict(test_images[i,:,:]/255)
+    
+network_results['correct'] = network_results['target']-network_results['predicted']
+(sum(network_results['correct']==0)/10000)*100
