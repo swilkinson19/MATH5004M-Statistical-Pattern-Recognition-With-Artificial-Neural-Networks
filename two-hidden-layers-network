@@ -1,0 +1,108 @@
+#IMPORT PACKAGES
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import mnist
+
+#READ IN TRAINING DATA
+train_images = mnist.train_images()
+train_labels = mnist.train_labels()
+
+#READ IN AND PREPARE TEST CASES
+test_images = mnist.test_images()
+test_labels = mnist.test_labels()
+
+#DEFINE CLASS FOR NETWORK WITH TWO HIDDEN LAYERS
+#network with two hidden layers
+class TwoHiddenLayers():
+    
+    def __init__ (self, input_nodes, hidden_nodes1, hidden_nodes2, output_nodes, learning_rate):
+        
+        #set up network dimensions
+        self.in_nodes = input_nodes
+        self.out_nodes = output_nodes
+        self.mid1_nodes = hidden_nodes1
+        self.mid2_nodes = hidden_nodes2
+        self.lr = learning_rate
+        
+        #set up network parameters
+        self.lr = learning_rate 
+        
+        self.weights1 = (np.random.randn(self.mid1_nodes, self.in_nodes))/self.in_nodes
+        self.weights2 = (np.random.randn(self.mid2_nodes, self.mid1_nodes))/self.mid1_nodes
+        self.weights3 = (np.random.randn(self.out_nodes, self.mid2_nodes))/self.mid2_nodes
+        
+        self.bias1 = np.zeros((self.mid1_nodes, 1))
+        self.bias2 = np.zeros((self.mid2_nodes, 1))
+        self.bias3 = np.zeros((self.out_nodes, 1))
+
+    
+    def actfunc(self,x):
+        return 1/(1 + np.exp(-x.astype(float))) 
+    
+    def actfuncdiff(self, x):
+        return self.actfunc(x)*(1 - self.actfunc(x))
+    
+    def training(self, training_input, training_target):
+        
+        #set up each training case as an array of values
+        network_inputs = np.array(training_input.flatten(order='C'), ndmin=2).T
+        #define network target vectors
+        network_targets = np.array([0]*10, ndmin=2).T
+        network_targets[training_target] = 1
+        
+        #calculate the weighted sums from the input layer
+        weighted_sums1 = np.dot(self.weights1, network_inputs)
+        #output of the hidden layer
+        hidden_layer_output1 = self.actfunc(weighted_sums1)
+        #calculate the second weighted sums
+        weighted_sums2 = np.dot(self.weights2, hidden_layer_output1)
+        #apply the activation function to the second weighted sums
+        hidden_layer_output2 = self.actfunc(weighted_sums2)
+        #calculate the third weighted sums
+        weighted_sums3 = np.dot(self.weights3, hidden_layer_output2)
+        #apply the activation function to the third weighted sum
+        network_outputs = self.actfunc(weighted_sums3)
+            
+        #compare the network output with the target values
+        network_error = network_targets - network_outputs
+        #transmit error back to the second hidden layer
+        hidden_error2 = np.dot(self.weights3.T, network_error)
+        #transmit error back to the first hidden layer
+        hidden_error1 = np.dot(self.weights2.T, hidden_error2)
+        
+        #update the bias
+        self.bias3 += self.lr * network_error * self.actfuncdiff(weighted_sums3)
+        self.bias2 += self.lr * hidden_error2 * self.actfuncdiff(weighted_sums2)
+        self.bias1 += self.lr * hidden_error1 * self.actfuncdiff(weighted_sums1)
+        
+        #update the weights
+        self.weights3 += self.lr * np.dot((network_error*self.actfuncdiff(weighted_sums3)), hidden_layer_output2.T)
+        self.weights2 += self.lr * np.dot((hidden_error2*self.actfuncdiff(weighted_sums2)), hidden_layer_output1.T)
+        self.weights1 += self.lr * np.dot((hidden_error1*self.actfuncdiff(weighted_sums1)), network_inputs.T)
+
+    def test(self, input_data):
+        network_inputs = np.array(input_data.flatten(order='C'), ndmin=2).T
+        weighted_sums1 = np.dot(self.weights1, network_inputs)
+        hidden_layer_output1 = self.actfunc(weighted_sums1)
+        weighted_sums2 = np.dot(self.weights2, hidden_layer_output1)
+        hidden_layer_output2 = self.actfunc(weighted_sums2)
+        weighted_sums3 = np.dot(self.weights3, hidden_layer_output2)
+        network_output = self.actfunc(weighted_sums3)
+        return network_output
+   
+#CREATE AN INSTANCE OF THE NETWORK
+network_one = TwoHiddenLayers(input_nodes = 28*28, hidden_nodes1 = 50, hidden_nodes2 = 50, output_nodes = 10, learning_rate = .05)
+
+#TRAIN THE NETWORK
+for i in range(60000):
+    network_one.training(train_images[i,:,:]/255, train_labels[i])
+    
+#TEST THE NETWORK
+network_results = pd.DataFrame(index=range(10000) , columns=['target','predicted','correct'])
+for i in range(10000):
+    network_results['target'][i] = test_labels[i]
+    network_results['predicted'][i] = network_one.predict(test_images[i,:,:])
+    
+network_results['correct'] = network_results['target']-network_results['predicted']
+(sum(network_results['correct']==0)/10000)*100
