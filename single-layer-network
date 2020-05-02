@@ -67,7 +67,7 @@ for i in range(60000):
     network_test.training((train_images[i,:,:]/255), train_labels[i])
 
 #TEST THE NETWORK
-cc_count = 0
+acc_count = 0
 network_test_results = pd.DataFrame(index=range(10000) , columns=['target','predicted','correct'])
 for i in range(10000):
     current_output = network_test.predict((test_images[i,:,:]/255))
