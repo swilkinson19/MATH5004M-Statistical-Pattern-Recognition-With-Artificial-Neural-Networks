@@ -1,0 +1,81 @@
+#IMPORT PACKAGES
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import mnist
+
+#READ IN TRAINING DATA
+train_images = mnist.train_images()
+train_labels = mnist.train_labels()
+
+#READ IN AND PREPARE TEST CASES
+test_images = mnist.test_images()
+test_labels = mnist.test_labels()
+
+#DEFINE NEURAL NETWORK CLASS
+class NeuralNetwork():
+    
+    def __init__ (self, input_nodes, output_nodes, learning_rate):
+        
+        #define dimensions of the network
+        self.in_nodes = input_nodes
+        self.out_nodes = output_nodes
+        
+        #set up network parameters
+        self.lr = learning_rate
+        self.bias = np.zeros((output_nodes, 1))
+        self.weights = (np.random.randn(self.out_nodes, self.in_nodes))/self.in_nodes
+        
+    def actfunc(self,x):
+        return 1/(1 + np.exp(-x.astype(float))) 
+    
+    def actfuncdiff(self, x):
+        return self.actfunc(x)*(1 - self.actfunc(x))
+    
+    def training(self, training_input, training_target):
+        
+        #for each training case:
+        #set up each training case as an array of values
+        network_inputs = np.array(training_input.flatten(order='C'), ndmin=2).T
+        network_targets = np.array([0]*10, ndmin=2).T
+        network_targets[training_target] = 1
+        #calculate the weighted sums from the input layer
+        weighted_sums = np.dot(self.weights, network_inputs) + self.bias
+        #apply the activation function to the weighted sums
+        network_outputs = self.actfunc(weighted_sums)
+            
+        #compute the network error
+        network_error = network_targets - network_outputs
+        
+        #update the bias
+        self.bias = self.bias + self.lr * network_error*self.actfuncdiff(weighted_sums)
+        #update the weights
+        self.weights = self.weights + self.lr * np.dot(network_error*self.actfuncdiff(weighted_sums), network_inputs.T)
+        
+        
+    def test(self, input_data):
+        network_inputs = np.array(input_data.flatten(order='C'), ndmin=2).T
+        weighted_sums = np.dot(self.weights, network_inputs)
+        network_output = self.actfunc(weighted_sums + self.bias)
+        return network_output
+        
+#INITIALISE AN INSTANCE OF THE NETWORK
+network_one = NeuralNetwork(28*28, 10, .05)
+
+#TRAIN THE NETWORK
+for i in range(60000):
+    network_test.training((train_images[i,:,:]/255), train_labels[i])
+
+#TEST THE NETWORK
+cc_count = 0
+network_test_results = pd.DataFrame(index=range(10000) , columns=['target','predicted','correct'])
+for i in range(10000):
+    current_output = network_test.predict((test_images[i,:,:]/255))
+    network_test_results['target'][i] = test_labels[i]
+    network_test_results['predicted'][i] = current_output
+    if current_output == test_labels[i]:
+        acc_test = 1
+    else:
+        acc_test=0
+    acc_count += acc_test
+print(acc_count/10000) 
