@@ -27,3 +27,8 @@ def Scaling(image_mat, sf):
                 new_img[i,j] = image_mat[x,y]
 
     return new_img
+
+#PLOT AN MNIST TRAINING IMAGE WITH SCALING
+fig,axes = plt.subplots(1,2, figsize=(5,5))
+axes[0].imshow(train_images[89,:,:], cmap='Greys', interpolation='None')
+axes[1].imshow(Scaling(train_images[89,:,:],2), cmap='Greys', interpolation='None')
