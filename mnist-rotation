@@ -1,0 +1,45 @@
+#IMPORT PACKAGES
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from PIL import Image
+import math 
+import mnist
+
+#LOAD DATA
+train_images = mnist.train_images()
+train_labels = mnist.train_labels()
+test_images = mnist.test_images()
+test_labels = mnist.test_labels()
+
+#DEFINE FUNCTION TO ROTATE MNIST IMAGES
+def Rotate(image_mat, ang):
+    #rotates image_mat anti-clockwise by ang
+    new_X = np.zeros(image_mat.shape)
+    new_Y = np.zeros(image_mat.shape)
+    new_img = np.zeros(image_mat.shape)
+    width = image_mat.shape[0]
+    height = image_mat.shape[1]
+
+    for i in range(width):
+        for j in range(height):
+            new_X[i,j] = round(((i-width/2)*math.cos(ang) - (j-height/2)*math.sin(ang)) + width/2)
+            new_Y[i,j] = round(((i-width/2)*math.sin(ang) + (j-height/2)*math.cos(ang)) + height/2)
+
+    for i in range(width):
+        for j in range(height):
+            x_alt = new_X[i,j]
+            y_alt = new_Y[i,j]
+            if (0<x_alt<width) & (0<y_alt<height) & (image_mat[i,j]!=0) :
+                new_img[int(x_alt), int(y_alt)] = image_mat[i,j]
+    #gap filling           
+    for i in range(1, width-1):
+        for j in range(1, height-1):
+            if (new_img[i,j]==0) & (new_img[i-1,j]!=0) & (new_img[i+1,j]!=0) & (new_img[i,j-1]!=0) & (new_img[i,j+1]!=0):
+                new_img[i,j] = (new_img[i-1,j] + new_img[i+1,j] + new_img[i,j-1] + new_img[i,j+1])/4
+    return new_img
+ 
+#PLOT AN MNIST TRAINING IMAGE WITH A ROTATION
+fig,axes = plt.subplots(1,2, figsize=(5,5))
+axes[0].imshow(train_images[89,:,:], cmap='Greys', interpolation='None')
+axes[1].imshow(Rotate(train_images[89,:,:],5*math.pi/4), cmap='Greys', interpolation='None')
