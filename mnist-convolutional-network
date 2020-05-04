@@ -17,9 +17,6 @@ class ConvolutionLayer():
     def __init__ (self, num_filters, lr):
         
         self.numfilters = num_filters
-        #self.filters = np.array([np.random.randint(-1,2) for p in range(3*3*num_filters)]).reshape((num_filters,3,3)).astype(float)
-        #self.filters = np.ones((self.numfilters, 3, 3))
-        self.last_input = []
         self.filters = np.random.randn(self.numfilters, 3, 3)/9
         self.lr = lr
         
@@ -32,7 +29,7 @@ class ConvolutionLayer():
             for i in range(input_image.shape[0]-2):
                 for j in range(input_image.shape[1]-2):
                     receptive_field = input_image[i:(i+3),j:(j+3)]
-                    conv_output[i,j,k] = max(0,(receptive_field * self.filters3[k,:,:]).sum())  
+                    conv_output[i,j,k] = max(0,(receptive_field * self.filters[k,:,:]).sum())  
         return(conv_output)                      
                 
     def training(self, adj):
@@ -46,7 +43,7 @@ class ConvolutionLayer():
                     receptive_field = self.last_input[i:(i+3),j:(j+3)]
                     filter_adj[k,:,:] += filter_error[i,j,k] * (receptive_field)
 
-                 self.filters3[k,:,:] += self.lr * filter_adj[k,:,:]
+                self.filters[k,:,:] += self.lr * filter_adj[k,:,:]
         
         self.adj = filter_adj
         
