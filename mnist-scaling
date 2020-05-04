@@ -1,0 +1,15 @@
+#DEFINE FUNCTION TO SCALE IMAGE BY SCALE FACTOR sf
+def Scaling(image_mat, sf):
+    
+    new_img = np.zeros(image_mat.shape)
+    width = image_mat.shape[0]
+    height = image_mat.shape[1]
+
+    for i in range(width):
+        for j in range(height):
+            x = round((i-width/2)/sf + (width/2))
+            y = round((j-width/2)/sf + (width/2))
+            if (x in range(width)) & (y in range(height)):
+                new_img[i,j] = image_mat[x,y]
+
+    return new_img
