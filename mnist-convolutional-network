@@ -19,21 +19,26 @@ class ConvolutionLayer():
         self.numfilters = num_filters
         self.filters = np.random.randn(self.numfilters, 3, 3)/9
         self.lr = lr
-        
+        self.bias = np.zeros((26,26,self.numfilters))
+    
+    def actfunc(self,x):
+        return 1/(1 + np.exp(-x.astype(float)))
+    
     def forward(self, input_image):
         
         self.last_input = input_image
-        conv_output = np.zeros((input_image.shape[0]-2, input_image.shape[1]-2, self.numfilters))
+        self.conv_output = np.zeros((input_image.shape[0]-2, input_image.shape[1]-2, self.numfilters))
         
         for k in range(self.numfilters):
             for i in range(input_image.shape[0]-2):
                 for j in range(input_image.shape[1]-2):
                     receptive_field = input_image[i:(i+3),j:(j+3)]
-                    conv_output[i,j,k] = max(0,(receptive_field * self.filters[k,:,:]).sum())  
-        return(conv_output)                      
+                    self.conv_output[i,j,k] = self.actfunc((receptive_field * self.filters[k,:,:]).sum() + self.bias[i,j,k])  
+        return(self.conv_output)                      
                 
     def training(self, adj):
-        filter_error = adj.reshape(self.last_input.shape[0]-2, self.last_input.shape[1]-2, self.numfilters)
+        filter_error1 = adj.reshape(self.last_input.shape[0]-2, self.last_input.shape[1]-2, self.numfilters)
+        filter_error = filter_error1 * self.conv_output * (1 - self.conv_output)
         filter_adj = np.zeros(self.filters.shape)
         
         for k in range(self.numfilters):
@@ -42,10 +47,12 @@ class ConvolutionLayer():
                 for j in range(self.last_input.shape[1]-2):
                     receptive_field = self.last_input[i:(i+3),j:(j+3)]
                     filter_adj[k,:,:] += filter_error[i,j,k] * (receptive_field)
+                    self.bias[i,j,k] += self.lr*filter_error[i,j,k]
 
                 self.filters[k,:,:] += self.lr * filter_adj[k,:,:]
         
         self.adj = filter_adj
+
         
 #CREATE CLASS FOR THE MAX-POOLING LAYER
 class PoolingLayer():
