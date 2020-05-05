@@ -1,0 +1,98 @@
+#IMPORT PACKAGES
+import numpy as np
+import pandas as pd
+import mnist
+
+#READ IN DATA
+train_images_all = mnist.train_images()
+train_labels_all = mnist.train_labels()
+test_images_all = mnist.test_images()
+test_labels_all = mnist.test_labels()
+
+#SELECT ONLY 0s AND 1s
+train_labels = []
+test_labels = []
+train_index = []
+test_index = []
+
+for i in range(60000):
+    if (train_labels_all[i] == 0) | (train_labels_all[i] == 1):
+        train_labels.append(train_labels_all[i])
+        train_index.append(i)
+for i in range(10000):
+    if (test_labels_all[i]==0) | (test_labels_all[i]==1):
+        test_labels.append(test_labels_all[i])
+        test_index.append(i)
+
+train_images = np.zeros((len(train_labels),28,28))
+count=0
+for j in train_index:
+    train_images[count,:,28] = train_images_all[j,:,:]
+    count += 1
+test_images = np.zeros((len(test_labels),28,28))
+count = 0
+for j in test_index:
+    test_images[count,:,:] = test_images_all[j,:,:]
+    count += 1
+        
+#DEFINE CLASS FOR NEURON
+class Neuron():
+    
+    def __init__ (self, input_nodes, learning_rate):
+        
+        #set up network dimensions
+        self.in_nodes = input_nodes
+        self.out_nodes = 1
+        
+        #set up network parameters
+        self.lr = learning_rate
+        self.bias = np.zeros((output_nodes, 1))
+        self.weights = (np.random.randn(self.out_nodes, self.in_nodes))/self.in_nodes
+        
+    def actfunc(self,x):
+        return 1/(1 + np.exp(-x.astype(float))) 
+    
+    def actfuncdiff(self, x):
+        return self.actfunc(x)*(1 - self.actfunc(x))
+    
+    def training(self, training_inputs, training_targets, iteration_number):
+        
+        #for each training case:
+        for i in range(0,iteration_number,1):
+            
+            #set up each training case as an array of values
+            network_inputs = np.array(training_inputs[i,:,:].flatten(order='C'),ndmin=2).T
+            network_targets = np.array(training_targets[i], ndmin=2).T
+            
+            #calculate the weighted sums from the input layer
+            weighted_sums = np.dot(self.weights, network_inputs)
+            #apply the activation function to the weighted sums
+            network_outputs = self.actfunc(weighted_sums + self.bias)
+            
+            #compare the network output with the target values
+            network_error = network_targets - network_outputs
+            #update the bias
+            self.bias = self.bias + self.lr * network_error*self.actfuncdiff(weighted_sums + self.bias)
+            #update the weights
+            self.weights = self.weights + self.lr * np.dot((network_error*self.actfuncdiff(weighted_sums + self.bias)), network_inputs.T)
+        
+    def test(self, input_data):
+        network_inputs = np.array(input_data.flatten(order='C'),ndmin=2).T
+        weighted_sums = np.dot(self.weights, network_inputs)
+        network_output = self.actfunc(weighted_sums + self.bias)
+        return network_output     
+
+INITIALISE INSTANCE OF THE NEURON
+neuron_test = Neuron(input_nodes = 784, learning_rate = 1.2)
+
+TRAIN THE NEURON
+neuron_test.training(training_inputs = train_images, training_targets = train_labels, iteration_number = len(train_labels))
+
+TEST THE NEURON
+network_results = pd.DataFrame(index=range(len(test_labels) , columns=['target','predicted','correct'])
+for i in range(len(test_labels)):
+    network_results['target'][i] = test_labels[i]
+    network_results['predicted'][i] = neuron_test.test(test_images[i,:,:])[0,0]
+    network_results['correct'] = abs(network_results['target']-network_results['predicted'])
+print((sum(network_results['correct']<0.5)/len(test_labels)*100)
+
