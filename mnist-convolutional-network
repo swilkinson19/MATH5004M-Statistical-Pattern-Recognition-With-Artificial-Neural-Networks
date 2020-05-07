@@ -142,9 +142,9 @@ class NeuralNetwork():
         return network_output.tolist().index(max(network_output.tolist()))
 
 #CREATE AN INSTANCE OF THE NETWORK
-network_conv = ConvolutionLayer(8, 0.01)
+network_conv = ConvolutionLayer(2, 0.01)
 network_pool = PoolingLayer()
-network_fc = NeuralNetwork(13*13*8, 10, 0.01)
+network_fc = NeuralNetwork(13*13*2, 10, 0.01)
 
 #TRAIN THE NETWORK
 for i in range(60000):    
