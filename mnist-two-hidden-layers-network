@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import mnist
 
 #READ IN TRAINING DATA
-train_images = mnist.train_images()
+train_images =  mnist.train_images()
 train_labels = mnist.train_labels()
 
 #READ IN AND PREPARE TEST CASES
